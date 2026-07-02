@@ -3,9 +3,8 @@ set -e
 CLANG_PATH="prebuilts/clang/host/linux-x86/clang-r383902"
 CLANG_BIN="$CLANG_PATH/bin"
 if [ ! -f "$CLANG_BIN/clang" ]; then
-mkdir -p "$CLANG_PATH"
-curl -L -o "$CLANG_PATH/clang" "https://github.com/Kevin233B/TALIH-PD2-Kernel/releases/download/other/clang"
-chmod +x "$CLANG_PATH/clang"
+curl -L -o "$CLANG_BIN/clang" "https://github.com/Kevin233B/TALIH-PD2-Kernel/releases/download/other/clang"
+chmod +x "$CLANG_BIN/clang"
 fi
 curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s builtin
 export PATH="$PWD/$CLANG_BIN:$PATH"
