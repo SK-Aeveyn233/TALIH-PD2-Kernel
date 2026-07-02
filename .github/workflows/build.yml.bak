@@ -11,26 +11,24 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev libc6-dev linux-libc-dev device-tree-compiler cpio gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf git wget xz-utils python3 python3-pip
-
+          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev device-tree-compiler cpio gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf git wget xz-utils python3 python3-pip
+      
       - name: Build kernel
         run: |
           chmod +x build-mt8797.sh
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
           ./build-mt8797.sh
-
+      
       - name: Package artifacts
         run: |
-          mkdir -p artifacts
+          mkdir -p artifacts/
           cp -r out/* artifacts/ 2>/dev/null || true
           cd artifacts
           tar -czf kernel-${GITHUB_SHA::8}.tar.gz *
-
+      
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -41,20 +39,21 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref, 'refs/tags/')
-
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: kernel-package
-
+      
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Kernel MT8797 ${{ github.ref_name }}
+          tag_name: ${{ github.sha }}
+          name: Kernel MT8797 ${{ github.sha }}
           body: Kernel build for MT8797
           files: kernel-*.tar.gz
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
