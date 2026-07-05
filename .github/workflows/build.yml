@@ -28,18 +28,11 @@ jobs:
           ./download_clang.sh
           ./build-mt8797.sh
 
-      - name: Package Image.gz
-        run: |
-          mkdir -p artifacts
-          cp out/arch/arm64/boot/Image.gz artifacts/
-          cd artifacts
-          mv Image.gz Image-${GITHUB_SHA::8}.gz
-
-      - name: Upload artifacts
+      - name: Upload Image.gz
         uses: actions/upload-artifact@v4
         with:
           name: kernel-image
-          path: artifacts/Image-*.gz
+          path: out/arch/arm64/boot/Image.gz
           retention-days: 7
 
   release:
@@ -48,7 +41,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - name: Download artifacts
+      - name: Download Image.gz
         uses: actions/download-artifact@v4
         with:
           name: kernel-image
@@ -59,6 +52,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Kernel MT8797 ${{ github.ref_name }}
           body: Kernel Image.gz for MT8797
-          files: Image-*.gz
+          files: Image.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
