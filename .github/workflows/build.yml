@@ -39,23 +39,29 @@ jobs:
         make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
         make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
 
+    - name: Debug - List all files
+      run: |
+        echo "=== ALL Image FILES ==="
+        find . -type f -name "*Image*" 2>/dev/null | grep -v "\.lds" | grep -v "\.o" | sort
+        echo "=== arch/arm64/boot/ ==="
+        ls -la arch/arm64/boot/ 2>/dev/null || echo "Directory not found"
+        echo "=== out/arch/arm64/boot/ ==="
+        ls -la out/arch/arm64/boot/ 2>/dev/null || echo "Directory not found"
+        echo "=== Any file named Image ==="
+        find . -type f -name "Image" 2>/dev/null | sort
+
     - name: Package AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
-        # 全目录暴力搜索，排除 .lds 和 .o 文件
-        IMAGE_PATH=$(find . -type f -name "Image" ! -name "*.lds" ! -name "*.o" 2>/dev/null | head -1)
-        if [ -z "$IMAGE_PATH" ]; then
-          IMAGE_PATH=$(find . -type f -name "Image.gz" ! -name "*.lds" ! -name "*.o" 2>/dev/null | head -1)
-        fi
-        if [ -z "$IMAGE_PATH" ]; then
-          IMAGE_PATH=$(find . -type f -name "zImage" ! -name "*.lds" ! -name "*.o" 2>/dev/null | head -1)
-        fi
-        if [ -z "$IMAGE_PATH" ]; then
-          echo "Error: Image not found!"
+        # 直接从已知路径拷贝
+        if [ -f "arch/arm64/boot/Image" ]; then
+          cp arch/arm64/boot/Image AnyKernel3/
+        elif [ -f "out/arch/arm64/boot/Image" ]; then
+          cp out/arch/arm64/boot/Image AnyKernel3/
+        else
+          echo "Error: Image not found in standard locations!"
           exit 1
         fi
-        echo "Found Image at: $IMAGE_PATH"
-        cp "$IMAGE_PATH" AnyKernel3/Image
         sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
         sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
         sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
