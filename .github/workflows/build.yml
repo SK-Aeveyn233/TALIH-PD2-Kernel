@@ -35,20 +35,15 @@ jobs:
         sed -i 's/CONFIG_LTO=y/CONFIG_LTO=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
         sed -i 's/CONFIG_CC_WERROR=y/CONFIG_CC_WERROR=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
         sed -i 's/CONFIG_KPROBES=y/CONFIG_KPROBES=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
+        # 关键：重新生成依赖，让配置生效
+        make ARCH=arm64 olddefconfig
 
     - name: Build kernel
       run: |
         export PATH=/usr/lib/llvm-14/bin:$PATH
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-        make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
-        make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
-        echo "=== SEARCHING FOR Image ==="
-        find . -name "*Image*" -type f 2>/dev/null | grep -v "\.lds" | grep -v "\.o" | grep -v "\.ko"
-        echo "=== arch/arm64/boot/ CONTENTS ==="
-        ls -la arch/arm64/boot/ 2>/dev/null || echo "No boot directory"
-        echo "=== vmlinux ==="
-        ls -la vmlinux 2>/dev/null || echo "No vmlinux"
+        make ARCH=arm64 Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
 
     - name: Package AnyKernel3
       run: |
