@@ -42,22 +42,8 @@ jobs:
         make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
         make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
 
-    - name: Package AnyKernel3
-      run: |
-        git clone --depth=1 https://github.com/osm0sis/AnyKernel3
-        IMAGE_PATH=$(find . -name "Image" -type f 2>/dev/null | head -1)
-        if [ -z "$IMAGE_PATH" ]; then
-          echo "Image not found!"
-          exit 1
-        fi
-        cp "$IMAGE_PATH" AnyKernel3/Image
-        sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
-        sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
-        sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
-        cd AnyKernel3 && zip -r ../AnyKernel3-SukiSU-Ultra.zip *
-
-    - name: Upload AnyKernel3
+    - name: Upload boot directory
       uses: actions/upload-artifact@v4
       with:
-        name: AnyKernel3-SukiSU-Ultra
-        path: AnyKernel3-SukiSU-Ultra.zip
+        name: boot-directory
+        path: arch/arm64/boot/
