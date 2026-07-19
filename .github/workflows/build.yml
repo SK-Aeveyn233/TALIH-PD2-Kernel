@@ -17,23 +17,37 @@ jobs:
       run: |
         git clone --depth=1 https://github.com/tiann/KernelSU -b v0.9.5 KernelSU
 
+    - name: Configure kernel
+      run: |
+        echo "CONFIG_KSU=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "CONFIG_KSU_SUSFS_HIDE_MOUNTS=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "CONFIG_KSU_SUSFS_SUS_SU=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "CONFIG_KALLSYMS=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "CONFIG_KALLSYMS_ALL=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "CONFIG_DEBUG_INFO=n" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        echo "# CONFIG_DEBUG_INFO is not set" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
+        sed -i 's/CONFIG_LTO=y/CONFIG_LTO=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
+        sed -i 's/CONFIG_CC_WERROR=y/CONFIG_CC_WERROR=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
+        sed -i 's/CONFIG_KPROBES=y/CONFIG_KPROBES=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
+
     - name: Build kernel
       run: |
         export PATH=/usr/lib/llvm-14/bin:$PATH
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
         make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
-        make -j$(nproc) ARCH=arm64 CC=clang Image
+        make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
 
     - name: Package AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
-        IMAGE_PATH=$(find . -name "Image" -type f 2>/dev/null | head -1)
+        IMAGE_PATH=$(find . -path "*arch/arm64/boot/Image" -type f 2>/dev/null | head -1)
         if [ -z "$IMAGE_PATH" ]; then
-          IMAGE_PATH=$(find . -name "Image.gz" -type f 2>/dev/null | head -1)
+          IMAGE_PATH=$(find . -name "Image" -type f 2>/dev/null | head -1)
         fi
         if [ -z "$IMAGE_PATH" ]; then
-          echo "Error: Image file not found!"
+          echo "Error: Image not found!"
           find . -name "*Image*" -type f 2>/dev/null
           exit 1
         fi
