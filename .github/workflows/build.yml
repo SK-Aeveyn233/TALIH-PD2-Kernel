@@ -41,12 +41,15 @@ jobs:
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
         make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
-        make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n KCFLAGS=-Wno-error 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n KCFLAGS=-Wno-error 2>&1 | grep -v "objdump: Warning"
+        make -j$(nproc) ARCH=arm64 CC=clang zImage CONFIG_DEBUG_INFO=n KCFLAGS=-Wno-error 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang zImage CONFIG_DEBUG_INFO=n KCFLAGS=-Wno-error 2>&1 | grep -v "objdump: Warning"
 
     - name: Package AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
-        IMAGE_PATH=$(find . -name "Image" -type f 2>/dev/null | head -1)
+        IMAGE_PATH=$(find . -name "zImage" -type f 2>/dev/null | head -1)
+        if [ -z "$IMAGE_PATH" ]; then
+          IMAGE_PATH=$(find . -name "Image" -type f 2>/dev/null | head -1)
+        fi
         if [ -z "$IMAGE_PATH" ]; then
           IMAGE_PATH=$(find . -name "Image.gz" -type f 2>/dev/null | head -1)
         fi
