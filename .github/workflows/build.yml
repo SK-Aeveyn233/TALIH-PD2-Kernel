@@ -1,60 +1,41 @@
-name: Build and Release Kernel
-
+name: Build Kernel for TALPad
 on:
-  push:
-    branches: [ main, master ]
-    tags: [ '*' ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev libc6-dev linux-libc-dev device-tree-compiler cpio gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf git wget xz-utils python3 python3-pip
+    - name: Setup tools
+      run: |
+        sudo apt update
+        sudo apt install -y git make gcc clang-14 lld-14 gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi flex bison libssl-dev bc rsync
 
-      - name: Build kernel
-        run: |
-          chmod +x build-mt8797.sh
-          chmod +x Integrate_sukisu.sh
-          chmod +x Integrate_SUSFS.sh
-          chmod +x download_clang.sh
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          ./download_clang.sh
-          ./build-mt8797.sh
+    - name: Clone KernelSU
+      run: |
+        git clone --depth=1 https://github.com/tiann/KernelSU -b v0.9.5 KernelSU
 
-      - name: Upload Image.gz
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-image
-          path: |
-            out/arch/arm64/boot/Image.gz
-            out/System.map
-            out/vmlinux
-          retention-days: 7
+    - name: Build kernel
+      run: |
+        export PATH=/usr/lib/llvm-14/bin:$PATH
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+        make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
+        make -j$(nproc) ARCH=arm64 CC=clang Image
 
-  release:
-    needs: build
-    runs-on: ubuntu-22.04
-    if: startsWith(github.ref, 'refs/tags/')
+    - name: Package AnyKernel3
+      run: |
+        git clone --depth=1 https://github.com/osm0sis/AnyKernel3
+        cp arch/arm64/boot/Image AnyKernel3/
+        sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
+        sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
+        sed -i 's/IS_SLOT_DEVICE=0;/is_slot_device=auto;/g' AnyKernel3/anykernel.sh
+        cd AnyKernel3 && zip -r ../AnyKernel3.zip *
 
-    steps:
-      - name: Download Image.gz
-        uses: actions/download-artifact@v4
-        with:
-          name: kernel-image
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Kernel MT8797 ${{ github.ref_name }}
-          body: Kernel Image.gz for MT8797
-          files: Image.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload AnyKernel3
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnyKernel3-TALPad
+        path: AnyKernel3.zip
