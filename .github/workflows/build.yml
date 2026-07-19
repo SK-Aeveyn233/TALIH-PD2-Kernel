@@ -40,23 +40,19 @@ jobs:
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
         make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
-        make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
+        make -j$(nproc) ARCH=arm64 CC=clang zImage CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang zImage CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
 
     - name: Package AnyKernel3
       run: |
         git clone --depth=1 https://github.com/osm0sis/AnyKernel3
-        # 暴力搜索所有可能的 Image 路径
-        IMAGE_PATH=$(find . -type f \( -name "Image" -o -name "Image.gz" -o -name "zImage" -o -name "Image.lz4" -o -name "Image.gz-dtb" \) -not -path "*/\.*" 2>/dev/null | grep -v "\.lds" | grep -v "\.o" | grep -v "\.ko" | head -1)
+        IMAGE_PATH=$(find . -name "zImage" -type f 2>/dev/null | head -1)
         if [ -z "$IMAGE_PATH" ]; then
-          # 如果找不到，列出所有包含 Image 的文件
-          echo "Image not found! All files containing 'Image':"
-          find . -type f -name "*Image*" -not -path "*/\.*" 2>/dev/null | head -20
-          echo ""
-          echo "Checking arch/arm64/boot/:"
-          ls -la arch/arm64/boot/ 2>/dev/null || echo "No boot directory"
+          IMAGE_PATH=$(find . -name "Image" -type f 2>/dev/null | head -1)
+        fi
+        if [ -z "$IMAGE_PATH" ]; then
+          echo "Image not found!"
           exit 1
         fi
-        echo "Found Image at: $IMAGE_PATH"
         cp "$IMAGE_PATH" AnyKernel3/Image
         sed -i 's/do.devicecheck=1/do.devicecheck=0/g' AnyKernel3/anykernel.sh
         sed -i 's!BLOCK=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!BLOCK=auto;!g' AnyKernel3/anykernel.sh
