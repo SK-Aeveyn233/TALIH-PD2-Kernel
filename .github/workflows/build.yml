@@ -19,10 +19,8 @@ jobs:
 
     - name: Configure kernel
       run: |
-        # 强制开启ARM64架构和Image生成
         echo "CONFIG_ARM64=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "CONFIG_KERNEL_IMAGE=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
-        # SukiSU Ultra + SUSFS 最强隐藏
         echo "CONFIG_KSU=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "CONFIG_KSU_SUSFS=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "CONFIG_KSU_SUSFS_HIDE_MOUNTS=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
@@ -30,10 +28,8 @@ jobs:
         echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "CONFIG_KSU_SUSFS_SUS_SU=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
-        # 非GKI必须
         echo "CONFIG_KALLSYMS=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "CONFIG_KALLSYMS_ALL=y" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
-        # 关闭调试和冲突项
         echo "CONFIG_DEBUG_INFO=n" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         echo "# CONFIG_DEBUG_INFO is not set" >> arch/arm64/configs/ls12_mt8797_wifi_64_defconfig
         sed -i 's/CONFIG_LTO=y/CONFIG_LTO=n/g' arch/arm64/configs/ls12_mt8797_wifi_64_defconfig || true
@@ -47,6 +43,12 @@ jobs:
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
         make ARCH=arm64 ls12_mt8797_wifi_64_defconfig
         make -j$(nproc) ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning" || make -j1 ARCH=arm64 CC=clang Image CONFIG_DEBUG_INFO=n 2>&1 | grep -v "objdump: Warning"
+        echo "=== SEARCHING FOR Image ==="
+        find . -name "*Image*" -type f 2>/dev/null | grep -v "\.lds" | grep -v "\.o" | grep -v "\.ko"
+        echo "=== arch/arm64/boot/ CONTENTS ==="
+        ls -la arch/arm64/boot/ 2>/dev/null || echo "No boot directory"
+        echo "=== vmlinux ==="
+        ls -la vmlinux 2>/dev/null || echo "No vmlinux"
 
     - name: Package AnyKernel3
       run: |
